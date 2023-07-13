@@ -1,52 +1,50 @@
+import React, { useContext, useState } from "react";
 import Img from "../assets/img.png";
 import Attach from "../assets/attach.png";
-import React, { useContext, useState } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { ChatContext } from "../context/ChatContext";
 import {
-  Timestamp,
   arrayUnion,
   doc,
   serverTimestamp,
-  getDoc,
+  Timestamp,
   updateDoc,
 } from "firebase/firestore";
+import { db, storage } from "../firebase";
 import { v4 as uuid } from "uuid";
-import { auth, db, storage } from "../firebase";
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
 
 const Input = () => {
   const [text, setText] = useState("");
-  const [image, setImage] = useState(null);
+  const [img, setImg] = useState(null);
 
   const { currentUser } = useContext(AuthContext);
   const { data } = useContext(ChatContext);
 
   const handleSend = async () => {
-    const chatDocRef = doc(db, "chats", data.chatId);
-    const chatDocSnap = await getDoc(chatDocRef);
-
-    if (!chatDocSnap.exists()) {
-      // handle the case where the document doesn't exist
-      console.error("No such document!");
-      return;
-    }
-    if (image) {
+    if (img) {
       const storageRef = ref(storage, uuid());
 
-      await uploadBytesResumable(storageRef, image).then(() => {
-        getDownloadURL(storageRef).then(async (downloadURL) => {
-          await updateDoc(doc(db, "chats", data.chatId), {
-            messages: arrayUnion({
-              id: uuid(),
-              text,
-              senderId: currentUser.uid,
-              date: Timestamp.now(),
-              img: downloadURL,
-            }),
+      const uploadTask = uploadBytesResumable(storageRef, img);
+
+      uploadTask.on(
+        (error) => {
+          //TODO:Handle Error
+        },
+        () => {
+          getDownloadURL(uploadTask.snapshot.ref).then(async (downloadURL) => {
+            await updateDoc(doc(db, "chats", data.chatId), {
+              messages: arrayUnion({
+                id: uuid(),
+                text,
+                senderId: currentUser.uid,
+                date: Timestamp.now(),
+                img: downloadURL,
+              }),
+            });
           });
-        });
-      });
+        }
+      );
     } else {
       await updateDoc(doc(db, "chats", data.chatId), {
         messages: arrayUnion({
@@ -73,28 +71,26 @@ const Input = () => {
     });
 
     setText("");
-    setImage(null);
+    setImg(null);
   };
-
-  
   return (
     <div className="input">
       <input
         type="text"
-        placeholder="Message"
+        placeholder="Type something..."
         onChange={(e) => setText(e.target.value)}
         value={text}
       />
       <div className="send">
-        <img src={Attach} alt="attach" />
+        <img src={Attach} alt="" />
         <input
           type="file"
           style={{ display: "none" }}
           id="file"
-          onChange={(e) => setImage(e.target.files[0])}
+          onChange={(e) => setImg(e.target.files[0])}
         />
         <label htmlFor="file">
-          <img src={Img} alt="image" />
+          <img src={Img} alt="" />
         </label>
         <button onClick={handleSend}>Send</button>
       </div>
