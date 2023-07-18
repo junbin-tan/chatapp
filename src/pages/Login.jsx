@@ -47,6 +47,10 @@ const Login = () => {
           {err && <span>Something went wrong</span>}
         </form>
         <p>Don't have an account? <Link to="/register">Register</Link></p>
+        <div></div>
+        <div></div>
+        <p>Try me! email: demo@gmail.com | password: password</p>
+
       </div>
     </div>
   ); 
